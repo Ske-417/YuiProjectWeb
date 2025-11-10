@@ -21,6 +21,7 @@
 
         <div class="auth" id="authArea" aria-live="polite">
           <span id="userEmail" class="muted" aria-hidden="true"></span>
+          <a id="adminLink" class="small hidden" href="/admin.html" aria-hidden="true">管理画面</a>
           <button id="signOutBtn" class="hidden small" aria-hidden="true">サインアウト</button>
         </div>
       </div>
@@ -30,7 +31,8 @@
     <main class="container" id="loginView">
       <section class="card" aria-labelledby="loginTitle">
         <h2 id="loginTitle">ログイン / クラウド同期</h2>
-        <p class="muted">メールアドレスでマジックリンクを送ります。リンクをクリックして戻ると自動でログインします。</p>
+        <p class="muted">メールアドレスでマジックリンクを送ります。リンクをクリックして戻ると自動でログインします。<br>
+        Supabase のプロジェクトで認証の「Site URL / Redirect URLs」にこのアプリの URL（例: https://Ske-417.github.io/YuiProjectWeb/ または http://localhost:8000/）を追加してください。</p>
 
         <div class="login-controls" style="margin-top:12px;">
           <label for="emailInput" class="sr-only">メールアドレス</label>
