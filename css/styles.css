@@ -1,0 +1,122 @@
+:root{
+  --bg:#f7f9fc;
+  --card:#ffffff;
+  --accent:#2b7cff;
+  --muted:#666;
+  --danger:#d9534f;
+}
+
+*{box-sizing:border-box}
+body{
+  font-family: system-ui, -apple-system, "Hiragino Kaku Gothic ProN", "Helvetica Neue", Arial;
+  margin:0;
+  background:var(--bg);
+  color:#111;
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+}
+
+.container{
+  max-width:900px;
+  margin:24px auto;
+  padding:20px;
+}
+
+header{
+  text-align:center;
+  margin-bottom:18px;
+}
+
+.controls, .history{
+  background:var(--card);
+  padding:16px;
+  border-radius:8px;
+  box-shadow:0 1px 3px rgba(0,0,0,0.06);
+  margin-bottom:16px;
+}
+
+.buttons{
+  display:flex;
+  gap:8px;
+  margin-bottom:12px;
+}
+
+button{
+  padding:10px 14px;
+  border-radius:6px;
+  border:1px solid rgba(0,0,0,0.08);
+  background:#fff;
+  cursor:pointer;
+  font-weight:600;
+}
+
+button:disabled{
+  opacity:0.5;
+  cursor:not-allowed;
+}
+
+#startBtn{
+  background:linear-gradient(180deg,var(--accent),#1a5fe6);
+  color:#fff;
+  border:none;
+}
+
+#stopBtn{
+  background:linear-gradient(180deg,#efefef,#e6e6e6);
+}
+
+.status p{
+  margin:6px 0;
+  color:var(--muted);
+}
+
+task-buttons{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+}
+
+task-buttons button{
+  padding:8px 10px;
+  background:#f2f6ff;
+  border:1px solid rgba(43,124,255,0.12);
+  color:var(--accent);
+}
+
+task-buttons button.active{
+  background:var(--accent);
+  color:#fff;
+}
+
+.history-actions{
+  display:flex;
+  gap:8px;
+  margin-bottom:10px;
+}
+
+#historyList .entry{
+  border-top:1px dashed #e6eefb;
+  padding:10px 0;
+}
+
+.entry h3{
+  margin:0 0 6px 0;
+}
+
+task-table{
+  font-size:14px;
+  margin-top:8px;
+  border-collapse:collapse;
+  width:100%;
+}
+
+task-table td, .task-table th{
+  border:1px solid #f0f0f0;
+  padding:6px;
+  text-align:left;
+}
+
+.footer-note{
+  font-size:13px;
+  color:var(--muted);
+}
