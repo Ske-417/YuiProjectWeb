@@ -1,11 +1,16 @@
-// Yui - 修正版：ログイン画面とアプリを分離し、Magic Link の送信でフィードバックする
+// Yui - 修正版（supabase 初期化の TDZ 問題を修正）
 // Supabase credentials (you provided)
-// 注意: PUBLIC anon key をフロントで使いますが、Supabase 側で RLS を必ず有効化して下さい。
 const SUPABASE_URL = 'https://laomhooyupangbkkhouw.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxhb21ob295dXBhbmdia2tob3V3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI3MzA3MzgsImV4cCI6MjA3ODMwNjczOH0.rm8wf8EjIGnABfeCDPVBtpMWQoxVrjZGrp8ZwphPlxw';
 
-// supabase client (UMD global)
-const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+// Ensure supabase UMD global exists, then create client.
+// Use a different variable name (supabaseClient) to avoid referencing the same identifier during initialization.
+if (typeof window === 'undefined' || typeof window.supabase === 'undefined') {
+  console.error('Supabase SDK が読み込まれていません。index.html で <script src=".../supabase.min.js"> があることを確認してください。');
+}
+const supabaseClient = window?.supabase?.createClient
+  ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+  : null;
 
 // --- DOM ---
 const loginView = document.getElementById('loginView');
@@ -316,19 +321,17 @@ function generatePalette(n){
 
 // --- Supabase integration (auth & storage) ---
 
-// send magic link (with redirect set to current origin)
-// NOTE: make sure in Supabase Auth settings you added this app URL to "Site URL / Redirect URLs"
 async function sendMagicLink(email){
   if(!email){ alert('メールアドレスを入力してください'); return; }
+  if(!supabaseClient){ console.error('Supabase client not initialized'); loginHint.textContent = '内部エラー: Supabase が初期化されていません'; return; }
   try{
     sendMagicBtn.disabled = true;
     loginHint.textContent = '送信中... メールを確認してください（受信に数分かかることがあります）';
-    const redirectTo = window.location.origin + window.location.pathname; // return to same page
-    const { data, error } = await supabase.auth.signInWithOtp({ email, options: { emailRedirectTo: redirectTo } });
+    const redirectTo = window.location.origin + window.location.pathname;
+    const { data, error } = await supabaseClient.auth.signInWithOtp({ email, options: { emailRedirectTo: redirectTo } });
     if(error){
       console.error('sendMagicLink error', error);
       loginHint.textContent = '送信に失敗しました。コンソールを確認してください。';
-      sendMagicBtn.disabled = false;
       return;
     }
     loginHint.textContent = 'ログインリンクを送信しました。メールのリンクを開いて戻ってください。';
@@ -341,7 +344,8 @@ async function sendMagicLink(email){
 }
 
 async function signOut(){
-  await supabase.auth.signOut();
+  if(!supabaseClient){ currentUser = null; guestMode = false; updateUI(); return; }
+  await supabaseClient.auth.signOut();
   currentUser = null;
   guestMode = false;
   updateUI();
@@ -350,8 +354,9 @@ async function signOut(){
 // save one entry
 async function saveHistoryToSupabase(entry){
   if(!currentUser) throw new Error('未ログインです');
+  if(!supabaseClient) throw new Error('Supabase client not initialized');
   const payload = { user_id: currentUser.id, start_at: entry.startAt, end_at: entry.endAt, total_sec: entry.totalSec, per_task: entry.perTask };
-  const { data, error } = await supabase.from('histories').insert([payload]);
+  const { data, error } = await supabaseClient.from('histories').insert([payload]);
   if(error) throw error;
   return data;
 }
@@ -359,13 +364,14 @@ async function saveHistoryToSupabase(entry){
 // upload all (dedupe)
 async function uploadAllHistoryToSupabase(){
   if(!currentUser) throw new Error('未ログインです');
+  if(!supabaseClient) throw new Error('Supabase client not initialized');
   syncStatusSpan.textContent = '同期中...';
-  const { data: remote = [], error: rErr } = await supabase.from('histories').select('start_at,end_at').eq('user_id', currentUser.id);
+  const { data: remote = [], error: rErr } = await supabaseClient.from('histories').select('start_at,end_at').eq('user_id', currentUser.id);
   if(rErr){ syncStatusSpan.textContent='同期失敗'; throw rErr; }
   const remoteMap = new Set(remote.map(r => `${r.start_at}-${r.end_at}`));
   const toUpload = history.filter(h => !remoteMap.has(`${h.startAt}-${h.endAt}`)).map(h => ({ user_id: currentUser.id, start_at: h.startAt, end_at: h.endAt, total_sec: h.totalSec, per_task: h.perTask }));
   if(toUpload.length===0){ syncStatusSpan.textContent='アップロードする新規データはありません'; return; }
-  const { data, error } = await supabase.from('histories').insert(toUpload);
+  const { data, error } = await supabaseClient.from('histories').insert(toUpload);
   if(error){ syncStatusSpan.textContent='同期失敗'; throw error; }
   syncStatusSpan.textContent = `アップロード ${toUpload.length} 件`;
   return data;
@@ -374,8 +380,9 @@ async function uploadAllHistoryToSupabase(){
 // load remote and merge
 async function loadHistoryFromSupabase(){
   if(!currentUser) throw new Error('未ログインです');
+  if(!supabaseClient) throw new Error('Supabase client not initialized');
   syncStatusSpan.textContent = '読み込み中...';
-  const { data, error } = await supabase.from('histories').select('*').eq('user_id', currentUser.id).order('start_at', { ascending: false });
+  const { data, error } = await supabaseClient.from('histories').select('*').eq('user_id', currentUser.id).order('start_at', { ascending: false });
   if(error){ syncStatusSpan.textContent='読み込み失敗'; throw error; }
   const remote = data || [];
   const remoteEntries = remote.map(r => ({ id: r.id || cryptoRandomId(), startAt: Number(r.start_at), endAt: Number(r.end_at), totalSec: Number(r.total_sec), perTask: r.per_task || {}, savedAt: (new Date(r.created_at)).getTime() }));
@@ -390,15 +397,17 @@ async function loadHistoryFromSupabase(){
 
 // --- Auth state handling ---
 // Listen to auth changes and update UI
-supabase.auth.onAuthStateChange((event, session) => {
-  currentUser = session?.user ?? null;
-  if(currentUser){
-    loginHint.textContent = `ログイン済み: ${currentUser.email || currentUser.id}`;
-    // auto-load remote history and merge
-    loadHistoryFromSupabase().catch(e => { console.error('ロード失敗', e); syncStatusSpan.textContent = '読み込み失敗'; });
-  }
-  updateUI();
-});
+if (supabaseClient && supabaseClient.auth && typeof supabaseClient.auth.onAuthStateChange === 'function') {
+  supabaseClient.auth.onAuthStateChange((event, session) => {
+    currentUser = session?.user ?? null;
+    if(currentUser){
+      loginHint.textContent = `ログイン済み: ${currentUser.email || currentUser.id}`;
+      // auto-load remote history and merge
+      loadHistoryFromSupabase().catch(e => { console.error('ロード失敗', e); syncStatusSpan.textContent = '読み込み失敗'; });
+    }
+    updateUI();
+  });
+}
 
 // initial check for session (returns session if magic link returned)
 (async ()=>{
@@ -406,11 +415,16 @@ supabase.auth.onAuthStateChange((event, session) => {
   initTaskButtons();
   // check existing session
   try{
-    const s = await supabase.auth.getSession();
-    currentUser = s?.data?.session?.user ?? null;
-    if(currentUser) {
-      // if logged in, load remote
-      loadHistoryFromSupabase().catch(e=>console.error(e));
+    if (supabaseClient && supabaseClient.auth && typeof supabaseClient.auth.getSession === 'function') {
+      const s = await supabaseClient.auth.getSession();
+      currentUser = s?.data?.session?.user ?? null;
+      if(currentUser) {
+        // if logged in, load remote
+        loadHistoryFromSupabase().catch(e=>console.error(e));
+      }
+    } else {
+      console.warn('supabaseClient.auth.getSession is not available');
+      currentUser = null;
     }
   }catch(e){
     console.warn('getSession failed', e);
