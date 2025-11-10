@@ -1,17 +1,17 @@
-// Yui - 修正版：カスタム仕事内容を追加してボタン化（ローカル保存）
-// Supabase credentials (you provided)
+// Yui - 完全版 JS（カスタム仕事内容追加対応 + Supabase 安全初期化）
+// Supabase credentials (あなたの値を使っている場合はそのまま。必要ならプレースホルダに置き換えてから公開してください)
 const SUPABASE_URL = 'https://laomhooyupangbkkhouw.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxhb21ob295dXBhbmdia2tob3V3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI3MzA3MzgsImV4cCI6MjA3ODMwNjczOH0.rm8wf8EjIGnABfeCDPVBtpMWQoxVrjZGrp8ZwphPlxw';
 
-// Ensure supabase UMD global exists, then create client.
-if (typeof window === 'undefined' || typeof window.supabase === 'undefined') {
-  console.error('Supabase SDK が読み込まれていません。index.html で <script src=".../supabase.min.js"> があることを確認してください。');
+// Create supabase client safely from UMD global
+let supabaseClient = null;
+if (typeof window !== 'undefined' && window.supabase && typeof window.supabase.createClient === 'function') {
+  supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+} else {
+  console.warn('Supabase SDK が読み込まれていません。index.html で <script src=".../supabase.min.js"> を app.js より前に読み込んでください。');
 }
-const supabaseClient = window?.supabase?.createClient
-  ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
-  : null;
 
-// --- DOM ---
+// --- DOM elements ---
 const loginView = document.getElementById('loginView');
 const mainView = document.getElementById('mainView');
 
@@ -48,13 +48,15 @@ const chartLegend = document.getElementById('chartLegend');
 
 let chartInstance = null;
 
-// --- Tasks: defaults + custom storage keys ---
+// --- Tasks & storage keys ---
 const DEFAULT_TASKS = ["観察","投薬","記録","介助","移送","待機"];
 const KEY_CUSTOM_TASKS = 'yui_custom_tasks_v1';
+const KEY_STATE = 'yui_shift_state_v1';
+const KEY_HISTORY = 'yui_history_v1';
 
-// local state
-let customTasks = []; // user-added tasks (strings)
-let currentUser = null; // null = not logged in; {id,email} when logged in
+// --- State ---
+let customTasks = [];
+let currentUser = null; // supabase user or null
 let guestMode = false;
 
 let timerId = null;
@@ -67,10 +69,7 @@ let shiftState = {
 };
 let history = [];
 
-const KEY_STATE = 'yui_shift_state_v1';
-const KEY_HISTORY = 'yui_history_v1';
-
-// --- local storage helpers ---
+// ---------------- Local storage helpers ----------------
 function saveStateLocal(){ localStorage.setItem(KEY_STATE, JSON.stringify(shiftState)); }
 function loadStateLocal(){
   try{
@@ -80,41 +79,36 @@ function loadStateLocal(){
     if(h) history = JSON.parse(h);
     const c = localStorage.getItem(KEY_CUSTOM_TASKS);
     if(c) customTasks = JSON.parse(c);
-  }catch(e){ console.error(e); }
+  }catch(e){ console.error('loadStateLocal error', e); }
 }
 function saveHistoryLocal(){ localStorage.setItem(KEY_HISTORY, JSON.stringify(history)); }
 function saveCustomTasks(){ localStorage.setItem(KEY_CUSTOM_TASKS, JSON.stringify(customTasks)); }
 
-// --- utility ---
+// ---------------- Utilities ----------------
 function pad(n){ return n.toString().padStart(2,'0'); }
 function fmtDurationSeconds(sec){ sec = Math.floor(sec||0); const h=Math.floor(sec/3600); const m=Math.floor((sec%3600)/60); const s=sec%60; return `${pad(h)}:${pad(m)}:${pad(s)}`; }
 function fmtTime(ms){ return new Date(ms).toLocaleString(); }
 function now(){ return Date.now(); }
 function cryptoRandomId(){ return 'id-'+Math.random().toString(36).slice(2,10); }
 
-// --- Task buttons rendering (uses DEFAULT_TASKS + customTasks) ---
-function getAllTasks(){
-  // custom tasks should appear after defaults
-  return DEFAULT_TASKS.concat(customTasks);
-}
+// ---------------- Tasks UI ----------------
+function getAllTasks(){ return DEFAULT_TASKS.concat(customTasks); }
+
 function initTaskButtons(){
   taskButtonsDiv.innerHTML = '';
   const all = getAllTasks();
   all.forEach(t=>{
     const b = document.createElement('button');
-    b.type='button';
+    b.type = 'button';
     b.textContent = t;
     b.dataset.task = t;
-    // mark custom tasks for styling if needed
-    if(customTasks.find(ct => ct.toLowerCase() === (t||'').toLowerCase())){
-      b.dataset.custom = '1';
-    }
+    if(customTasks.find(ct => ct.toLowerCase() === (t||'').toLowerCase())) b.dataset.custom = '1';
     b.addEventListener('click', ()=> { if(!shiftState.working) return; switchTask(t); });
     taskButtonsDiv.appendChild(b);
   });
 }
 
-// --- Timer & UI updates ---
+// ---------------- Timer & UI ----------------
 function startTimer(){
   if(timerId) clearInterval(timerId);
   timerId = setInterval(()=>{
@@ -127,18 +121,8 @@ function startTimer(){
   },500);
 }
 
-function showLoginView(){
-  loginView.classList.remove('hidden');
-  mainView.classList.add('hidden');
-  loginView.setAttribute('aria-hidden','false');
-  mainView.setAttribute('aria-hidden','true');
-}
-function showMainView(){
-  loginView.classList.add('hidden');
-  mainView.classList.remove('hidden');
-  loginView.setAttribute('aria-hidden','true');
-  mainView.setAttribute('aria-hidden','false');
-}
+function showLoginView(){ loginView.classList.remove('hidden'); mainView.classList.add('hidden'); loginView.setAttribute('aria-hidden','false'); mainView.setAttribute('aria-hidden','true'); }
+function showMainView(){ loginView.classList.add('hidden'); mainView.classList.remove('hidden'); loginView.setAttribute('aria-hidden','true'); mainView.setAttribute('aria-hidden','false'); }
 
 function updateAuthUI(){
   if(currentUser){
@@ -172,7 +156,7 @@ function updateUI(){
   updateAuthUI();
 }
 
-// --- shift/task logic ---
+// ---------------- Shift & Task logic ----------------
 function switchTask(taskName){
   const tnow = now();
   if(shiftState.currentTask && shiftState.taskStartAt){
@@ -207,21 +191,13 @@ async function stopShift(){
     perTask[r.task] = (perTask[r.task] || 0) + sec;
   });
 
-  const entry = {
-    id: cryptoRandomId(),
-    startAt: shiftState.startAt,
-    endAt: tnow,
-    totalSec,
-    perTask,
-    savedAt: now()
-  };
+  const entry = { id: cryptoRandomId(), startAt: shiftState.startAt, endAt: tnow, totalSec, perTask, savedAt: now() };
 
   history.unshift(entry);
   saveHistoryLocal();
 
   showChart(entry);
 
-  // auto upload if logged in (not guest)
   if(currentUser){
     try{
       await saveHistoryToSupabase(entry);
@@ -230,11 +206,11 @@ async function stopShift(){
       console.error('Supabase save failed', e);
       syncStatusSpan.textContent = 'クラウド保存に失敗';
     }
-  }else{
+  } else {
     syncStatusSpan.textContent = guestMode ? 'ゲストモード：クラウド未保存' : '未ログイン';
   }
 
-  // reset
+  // reset shift state
   shiftState.working = false;
   shiftState.startAt = null;
   shiftState.currentTask = null;
@@ -244,7 +220,7 @@ async function stopShift(){
   updateUI();
 }
 
-// --- history render & CSV ---
+// ---------------- History & CSV ----------------
 function renderHistory(){
   historyList.innerHTML = '';
   if(history.length === 0){ historyList.innerHTML = '<p class="muted">まだ記録がありません。</p>'; return; }
@@ -299,7 +275,7 @@ function exportCsv(){
 }
 function clearHistory(){ if(!confirm('履歴を完全に削除します。よろしいですか？')) return; history=[]; saveHistoryLocal(); renderHistory(); }
 
-// --- chart ---
+// ---------------- Chart (Chart.js) ----------------
 function showChart(entry){
   const labels = Object.keys(entry.perTask || {});
   const data = labels.map(l => entry.perTask[l] || 0);
@@ -309,17 +285,7 @@ function showChart(entry){
     type:'pie',
     data:{ labels, datasets:[{ data, backgroundColor: colors, borderColor:'#fff', borderWidth:2 }]},
     options:{
-      plugins:{
-        tooltip:{
-          callbacks:{
-            label: function(context){
-              const sec = context.raw || 0;
-              const pct = (entry.totalSec>0) ? (sec/entry.totalSec*100).toFixed(1) : '0.0';
-              return `${context.label}: ${fmtDurationSeconds(sec)} (${pct}%)`;
-            }
-          }
-        }
-      }
+      plugins:{ tooltip:{ callbacks:{ label: function(ctx){ const sec = ctx.raw || 0; const pct = (entry.totalSec>0)?(sec/entry.totalSec*100).toFixed(1):'0.0'; return `${ctx.label}: ${fmtDurationSeconds(sec)} (${pct}%)`; } } } }
     }
   });
 
@@ -338,8 +304,7 @@ function generatePalette(n){
   const out = []; for(let i=0;i<n;i++) out.push(base[i%base.length]); return out;
 }
 
-// --- Supabase integration (auth & storage) ---
-
+// ---------------- Supabase integration ----------------
 async function sendMagicLink(email){
   if(!email){ alert('メールアドレスを入力してください'); return; }
   if(!supabaseClient){ console.error('Supabase client not initialized'); loginHint.textContent = '内部エラー: Supabase が初期化されていません'; return; }
@@ -347,16 +312,18 @@ async function sendMagicLink(email){
     sendMagicBtn.disabled = true;
     loginHint.textContent = '送信中... メールを確認してください（受信に数分かかることがあります）';
     const redirectTo = window.location.origin + window.location.pathname;
-    const { data, error } = await supabaseClient.auth.signInWithOtp({ email, options: { emailRedirectTo: redirectTo } });
+    const res = await supabaseClient.auth.signInWithOtp({ email, options: { emailRedirectTo: redirectTo } });
+    // library returns { data, error } or similar shape; normalize
+    const error = res?.error || (res?.data && res.data?.error) || null;
     if(error){
       console.error('sendMagicLink error', error);
-      loginHint.textContent = '送信に失敗しました。コンソールを確認してください。';
+      loginHint.textContent = '送信に失敗しました: ' + (error.message || JSON.stringify(error));
       return;
     }
     loginHint.textContent = 'ログインリンクを送信しました。メールのリンクを開いて戻ってください。';
   }catch(e){
-    console.error(e);
-    loginHint.textContent = '送信中にエラーが発生しました。';
+    console.error('sendMagicLink exception', e);
+    loginHint.textContent = '送信中にエラーが発生しました（コンソール参照）';
   }finally{
     sendMagicBtn.disabled = false;
   }
@@ -370,7 +337,6 @@ async function signOut(){
   updateUI();
 }
 
-// save one entry
 async function saveHistoryToSupabase(entry){
   if(!currentUser) throw new Error('未ログインです');
   if(!supabaseClient) throw new Error('Supabase client not initialized');
@@ -380,7 +346,6 @@ async function saveHistoryToSupabase(entry){
   return data;
 }
 
-// upload all (dedupe)
 async function uploadAllHistoryToSupabase(){
   if(!currentUser) throw new Error('未ログインです');
   if(!supabaseClient) throw new Error('Supabase client not initialized');
@@ -396,7 +361,6 @@ async function uploadAllHistoryToSupabase(){
   return data;
 }
 
-// load remote and merge
 async function loadHistoryFromSupabase(){
   if(!currentUser) throw new Error('未ログインです');
   if(!supabaseClient) throw new Error('Supabase client not initialized');
@@ -414,20 +378,19 @@ async function loadHistoryFromSupabase(){
   return history;
 }
 
-// --- Auth state handling ---
+// ---------------- Auth state handling ----------------
 if (supabaseClient && supabaseClient.auth && typeof supabaseClient.auth.onAuthStateChange === 'function') {
   supabaseClient.auth.onAuthStateChange((event, session) => {
     currentUser = session?.user ?? null;
     if(currentUser){
       loginHint.textContent = `ログイン済み: ${currentUser.email || currentUser.id}`;
-      // auto-load remote history and merge
       loadHistoryFromSupabase().catch(e => { console.error('ロード失敗', e); syncStatusSpan.textContent = '読み込み失敗'; });
     }
     updateUI();
   });
 }
 
-// initial check for session (returns session if magic link returned)
+// ---------------- Initialization ----------------
 (async ()=>{
   loadStateLocal();
   initTaskButtons();
@@ -436,13 +399,7 @@ if (supabaseClient && supabaseClient.auth && typeof supabaseClient.auth.onAuthSt
     if (supabaseClient && supabaseClient.auth && typeof supabaseClient.auth.getSession === 'function') {
       const s = await supabaseClient.auth.getSession();
       currentUser = s?.data?.session?.user ?? null;
-      if(currentUser) {
-        // if logged in, load remote
-        loadHistoryFromSupabase().catch(e=>console.error(e));
-      }
-    } else {
-      console.warn('supabaseClient.auth.getSession is not available');
-      currentUser = null;
+      if(currentUser) loadHistoryFromSupabase().catch(()=>{});
     }
   }catch(e){
     console.warn('getSession failed', e);
@@ -452,41 +409,26 @@ if (supabaseClient && supabaseClient.auth && typeof supabaseClient.auth.onAuthSt
   startTimer();
 })();
 
-// --- event bindings ---
+// ---------------- Event bindings ----------------
 // login
-sendMagicBtn.addEventListener('click', ()=> sendMagicLink(emailInput.value.trim()));
-guestBtn.addEventListener('click', ()=>{
-  guestMode = true;
-  currentUser = null;
-  updateUI();
-  alert('ゲストモードで開始します。クラウド同期はできません。');
-});
-signOutBtn.addEventListener('click', ()=> signOut());
+if (sendMagicBtn) sendMagicBtn.addEventListener('click', ()=> sendMagicLink(emailInput.value.trim()));
+if (guestBtn) guestBtn.addEventListener('click', ()=>{ guestMode = true; currentUser = null; updateUI(); alert('ゲストモードで開始します。クラウド同期はできません。'); });
+if (signOutBtn) signOutBtn.addEventListener('click', ()=> signOut());
 
 // basic app actions
-startBtn.addEventListener('click', ()=> startShift());
-stopBtn.addEventListener('click', ()=> stopShift());
-exportCsvBtn.addEventListener('click', ()=> exportCsv());
-clearHistoryBtn.addEventListener('click', ()=> clearHistory());
+if (startBtn) startBtn.addEventListener('click', ()=> startShift());
+if (stopBtn) stopBtn.addEventListener('click', ()=> stopShift());
+if (exportCsvBtn) exportCsvBtn.addEventListener('click', ()=> exportCsv());
+if (clearHistoryBtn) clearHistoryBtn.addEventListener('click', ()=> clearHistory());
 
 // sync actions
-syncUploadBtn.addEventListener('click', async ()=>{
-  if(!currentUser){ alert('クラウドに保存するにはログインしてください'); return; }
-  try{ await uploadAllHistoryToSupabase(); }catch(e){ console.error(e); alert('同期に失敗しました（コンソール参照）'); }
-});
-syncDownloadBtn.addEventListener('click', async ()=>{
-  if(!currentUser){ alert('クラウドから読み込むにはログインしてください'); return; }
-  try{ await loadHistoryFromSupabase(); }catch(e){ console.error(e); alert('読み込みに失敗しました（コンソール参照）'); }
-});
+if (syncUploadBtn) syncUploadBtn.addEventListener('click', async ()=>{ if(!currentUser){ alert('クラウドに保存するにはログインしてください'); return; } try{ await uploadAllHistoryToSupabase(); }catch(e){ console.error(e); alert('同期に失敗しました（コンソール参照）'); } });
+if (syncDownloadBtn) syncDownloadBtn.addEventListener('click', async ()=>{ if(!currentUser){ alert('クラウドから読み込むにはログインしてください'); return; } try{ await loadHistoryFromSupabase(); }catch(e){ console.error(e); alert('読み込みに失敗しました（コンソール参照）'); } });
 
 // chart modal close
-closeChartBtn.addEventListener('click', ()=> {
-  chartModal.classList.add('hidden');
-  if(chartInstance){ chartInstance.destroy(); chartInstance = null; chartLegend.innerHTML = ''; }
-});
+if (closeChartBtn) closeChartBtn.addEventListener('click', ()=> { chartModal.classList.add('hidden'); if(chartInstance){ chartInstance.destroy(); chartInstance = null; chartLegend.innerHTML = ''; } });
 
 // --- Custom task UI handlers ---
-// Add custom task (from input)
 function normalizeTaskName(name){ return (name || '').trim(); }
 function isDuplicateTask(name){
   if(!name) return true;
@@ -494,7 +436,7 @@ function isDuplicateTask(name){
   return getAllTasks().some(t => (t||'').toLowerCase() === lower);
 }
 
-addTaskBtn.addEventListener('click', ()=>{
+if (addTaskBtn) addTaskBtn.addEventListener('click', ()=>{
   const raw = newTaskInput.value || '';
   const name = normalizeTaskName(raw);
   if(!name){ alert('仕事内容を入力してください'); return; }
@@ -503,18 +445,15 @@ addTaskBtn.addEventListener('click', ()=>{
   saveCustomTasks();
   initTaskButtons();
   newTaskInput.value = '';
-  // optionally select it immediately
   if(shiftState.working) switchTask(name);
   updateUI();
 });
 
-// Enterキーで追加
-newTaskInput.addEventListener('keypress', (e)=>{
-  if(e.key === 'Enter'){ e.preventDefault(); addTaskBtn.click(); }
+if (newTaskInput) newTaskInput.addEventListener('keypress', (e)=>{
+  if(e.key === 'Enter'){ e.preventDefault(); if(addTaskBtn) addTaskBtn.click(); }
 });
 
-// Clear custom tasks
-clearCustomBtn.addEventListener('click', ()=>{
+if (clearCustomBtn) clearCustomBtn.addEventListener('click', ()=>{
   if(!confirm('追加したカスタム仕事内容をすべて削除します。よろしいですか？')) return;
   customTasks = [];
   saveCustomTasks();
