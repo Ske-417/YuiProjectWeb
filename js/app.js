@@ -340,7 +340,16 @@ async function signOut(){
 async function saveHistoryToSupabase(entry){
   if(!currentUser) throw new Error('未ログインです');
   if(!supabaseClient) throw new Error('Supabase client not initialized');
-  const payload = { user_id: currentUser.id, start_at: entry.startAt, end_at: entry.endAt, total_sec: entry.totalSec, per_task: entry.perTask };
+
+  const payload = {
+    user_id: currentUser.id,
+    user_email: currentUser.email || null,
+    start_at: entry.startAt,
+    end_at: entry.endAt,
+    total_sec: entry.totalSec,
+    per_task: entry.perTask
+  };
+
   const { data, error } = await supabaseClient.from('histories').insert([payload]);
   if(error) throw error;
   return data;
