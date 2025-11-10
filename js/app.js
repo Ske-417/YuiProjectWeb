@@ -1,7 +1,7 @@
-// Yui - 完全版 JS（カスタム仕事内容追加対応 + Supabase 安全初期化）
+// Yui - 完全版 JS（カスタム仕事内容対応 + Supabase 安全初期化）
 // Supabase credentials (あなたの値を使っている場合はそのまま。必要ならプレースホルダに置き換えてから公開してください)
 const SUPABASE_URL = 'https://laomhooyupangbkkhouw.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxhb21ob295dXBhbmdia2tob3V3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI3MzA3MzgsImV4cCI6MjA3ODMwNjczOH0.rm8wf8EjIGnABfeCDPVBtpMWQoxVrjZGrp8ZwphPlxw';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxhb21ob295dXBhbmdia2tibWtob3V3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI3MzA3MzgsImV4cCI6MjA3ODMwNjczOH0.rm8wf8EjIGnABfeCDPVBtpMWQoxVrjZGrp8ZwphPlxw';
 
 // Create supabase client safely from UMD global
 let supabaseClient = null;
@@ -22,6 +22,7 @@ const loginHint = document.getElementById('loginHint');
 
 const signOutBtn = document.getElementById('signOutBtn');
 const userEmailSpan = document.getElementById('userEmail');
+const adminLink = document.getElementById('adminLink');
 
 const startBtn = document.getElementById('startBtn');
 const stopBtn = document.getElementById('stopBtn');
@@ -58,6 +59,7 @@ const KEY_HISTORY = 'yui_history_v1';
 let customTasks = [];
 let currentUser = null; // supabase user or null
 let guestMode = false;
+let isAdmin = false; // whether current user is admin
 
 let timerId = null;
 let shiftState = {
@@ -137,6 +139,17 @@ function updateAuthUI(){
     userEmailSpan.textContent = '';
     signOutBtn.classList.add('hidden');
     showLoginView();
+  }
+
+  // admin link visibility depends on isAdmin and login state
+  if(adminLink){
+    if(currentUser && isAdmin){
+      adminLink.classList.remove('hidden');
+      adminLink.setAttribute('aria-hidden', 'false');
+    } else {
+      adminLink.classList.add('hidden');
+      adminLink.setAttribute('aria-hidden', 'true');
+    }
   }
 }
 
@@ -334,9 +347,11 @@ async function signOut(){
   await supabaseClient.auth.signOut();
   currentUser = null;
   guestMode = false;
+  isAdmin = false;
   updateUI();
 }
 
+// save one entry (include user_email)
 async function saveHistoryToSupabase(entry){
   if(!currentUser) throw new Error('未ログインです');
   if(!supabaseClient) throw new Error('Supabase client not initialized');
@@ -391,11 +406,25 @@ async function loadHistoryFromSupabase(){
 if (supabaseClient && supabaseClient.auth && typeof supabaseClient.auth.onAuthStateChange === 'function') {
   supabaseClient.auth.onAuthStateChange((event, session) => {
     currentUser = session?.user ?? null;
+    // check admin membership for showing admin link
+    (async ()=>{
+      if(currentUser && supabaseClient){
+        try{
+          const { data, error } = await supabaseClient.from('admins').select('id').eq('user_id', currentUser.id).limit(1);
+          isAdmin = Array.isArray(data) && data.length > 0;
+        }catch(e){
+          console.error('admin check failed', e);
+          isAdmin = false;
+        }
+      } else {
+        isAdmin = false;
+      }
+      updateUI();
+    })();
     if(currentUser){
       loginHint.textContent = `ログイン済み: ${currentUser.email || currentUser.id}`;
       loadHistoryFromSupabase().catch(e => { console.error('ロード失敗', e); syncStatusSpan.textContent = '読み込み失敗'; });
     }
-    updateUI();
   });
 }
 
@@ -408,11 +437,22 @@ if (supabaseClient && supabaseClient.auth && typeof supabaseClient.auth.onAuthSt
     if (supabaseClient && supabaseClient.auth && typeof supabaseClient.auth.getSession === 'function') {
       const s = await supabaseClient.auth.getSession();
       currentUser = s?.data?.session?.user ?? null;
-      if(currentUser) loadHistoryFromSupabase().catch(()=>{});
+      if(currentUser){
+        // check admin membership
+        try{
+          const { data, error } = await supabaseClient.from('admins').select('id').eq('user_id', currentUser.id).limit(1);
+          isAdmin = Array.isArray(data) && data.length > 0;
+        }catch(e){
+          console.error('admin check failed', e);
+          isAdmin = false;
+        }
+        await loadHistoryFromSupabase().catch(()=>{});
+      }
     }
   }catch(e){
     console.warn('getSession failed', e);
     currentUser = null;
+    isAdmin = false;
   }
   updateUI();
   startTimer();
@@ -423,6 +463,10 @@ if (supabaseClient && supabaseClient.auth && typeof supabaseClient.auth.onAuthSt
 if (sendMagicBtn) sendMagicBtn.addEventListener('click', ()=> sendMagicLink(emailInput.value.trim()));
 if (guestBtn) guestBtn.addEventListener('click', ()=>{ guestMode = true; currentUser = null; updateUI(); alert('ゲストモードで開始します。クラウド同期はできません。'); });
 if (signOutBtn) signOutBtn.addEventListener('click', ()=> signOut());
+if (adminLink) adminLink.addEventListener('click', (e)=> {
+  // normal link navigation; keep for clarity. if not admin, prevent navigation
+  if(!(currentUser && isAdmin)){ e.preventDefault(); alert('管理者のみアクセスできます'); }
+});
 
 // basic app actions
 if (startBtn) startBtn.addEventListener('click', ()=> startShift());
