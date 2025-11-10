@@ -1,10 +1,9 @@
-// Yui - 修正版（supabase 初期化の TDZ 問題を修正）
+// Yui - 修正版：カスタム仕事内容を追加してボタン化（ローカル保存）
 // Supabase credentials (you provided)
 const SUPABASE_URL = 'https://laomhooyupangbkkhouw.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxhb21ob295dXBhbmdia2tob3V3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI3MzA3MzgsImV4cCI6MjA3ODMwNjczOH0.rm8wf8EjIGnABfeCDPVBtpMWQoxVrjZGrp8ZwphPlxw';
 
 // Ensure supabase UMD global exists, then create client.
-// Use a different variable name (supabaseClient) to avoid referencing the same identifier during initialization.
 if (typeof window === 'undefined' || typeof window.supabase === 'undefined') {
   console.error('Supabase SDK が読み込まれていません。index.html で <script src=".../supabase.min.js"> があることを確認してください。');
 }
@@ -34,6 +33,10 @@ const historyList = document.getElementById('historyList');
 const exportCsvBtn = document.getElementById('exportCsv');
 const clearHistoryBtn = document.getElementById('clearHistory');
 
+const newTaskInput = document.getElementById('newTaskInput');
+const addTaskBtn = document.getElementById('addTaskBtn');
+const clearCustomBtn = document.getElementById('clearCustomBtn');
+
 const syncUploadBtn = document.getElementById('syncUpload');
 const syncDownloadBtn = document.getElementById('syncDownload');
 const syncStatusSpan = document.getElementById('syncStatus');
@@ -45,10 +48,12 @@ const chartLegend = document.getElementById('chartLegend');
 
 let chartInstance = null;
 
-// tasks
-const TASKS = ["観察","投薬","記録","介助","移送","待機"];
+// --- Tasks: defaults + custom storage keys ---
+const DEFAULT_TASKS = ["観察","投薬","記録","介助","移送","待機"];
+const KEY_CUSTOM_TASKS = 'yui_custom_tasks_v1';
 
 // local state
+let customTasks = []; // user-added tasks (strings)
 let currentUser = null; // null = not logged in; {id,email} when logged in
 let guestMode = false;
 
@@ -73,9 +78,12 @@ function loadStateLocal(){
     if(s) shiftState = JSON.parse(s);
     const h = localStorage.getItem(KEY_HISTORY);
     if(h) history = JSON.parse(h);
+    const c = localStorage.getItem(KEY_CUSTOM_TASKS);
+    if(c) customTasks = JSON.parse(c);
   }catch(e){ console.error(e); }
 }
 function saveHistoryLocal(){ localStorage.setItem(KEY_HISTORY, JSON.stringify(history)); }
+function saveCustomTasks(){ localStorage.setItem(KEY_CUSTOM_TASKS, JSON.stringify(customTasks)); }
 
 // --- utility ---
 function pad(n){ return n.toString().padStart(2,'0'); }
@@ -84,12 +92,23 @@ function fmtTime(ms){ return new Date(ms).toLocaleString(); }
 function now(){ return Date.now(); }
 function cryptoRandomId(){ return 'id-'+Math.random().toString(36).slice(2,10); }
 
-// --- UI init ---
+// --- Task buttons rendering (uses DEFAULT_TASKS + customTasks) ---
+function getAllTasks(){
+  // custom tasks should appear after defaults
+  return DEFAULT_TASKS.concat(customTasks);
+}
 function initTaskButtons(){
   taskButtonsDiv.innerHTML = '';
-  TASKS.forEach(t=>{
+  const all = getAllTasks();
+  all.forEach(t=>{
     const b = document.createElement('button');
-    b.type='button'; b.textContent = t; b.dataset.task = t;
+    b.type='button';
+    b.textContent = t;
+    b.dataset.task = t;
+    // mark custom tasks for styling if needed
+    if(customTasks.find(ct => ct.toLowerCase() === (t||'').toLowerCase())){
+      b.dataset.custom = '1';
+    }
     b.addEventListener('click', ()=> { if(!shiftState.working) return; switchTask(t); });
     taskButtonsDiv.appendChild(b);
   });
@@ -396,7 +415,6 @@ async function loadHistoryFromSupabase(){
 }
 
 // --- Auth state handling ---
-// Listen to auth changes and update UI
 if (supabaseClient && supabaseClient.auth && typeof supabaseClient.auth.onAuthStateChange === 'function') {
   supabaseClient.auth.onAuthStateChange((event, session) => {
     currentUser = session?.user ?? null;
@@ -435,6 +453,7 @@ if (supabaseClient && supabaseClient.auth && typeof supabaseClient.auth.onAuthSt
 })();
 
 // --- event bindings ---
+// login
 sendMagicBtn.addEventListener('click', ()=> sendMagicLink(emailInput.value.trim()));
 guestBtn.addEventListener('click', ()=>{
   guestMode = true;
@@ -444,11 +463,13 @@ guestBtn.addEventListener('click', ()=>{
 });
 signOutBtn.addEventListener('click', ()=> signOut());
 
+// basic app actions
 startBtn.addEventListener('click', ()=> startShift());
 stopBtn.addEventListener('click', ()=> stopShift());
 exportCsvBtn.addEventListener('click', ()=> exportCsv());
 clearHistoryBtn.addEventListener('click', ()=> clearHistory());
 
+// sync actions
 syncUploadBtn.addEventListener('click', async ()=>{
   if(!currentUser){ alert('クラウドに保存するにはログインしてください'); return; }
   try{ await uploadAllHistoryToSupabase(); }catch(e){ console.error(e); alert('同期に失敗しました（コンソール参照）'); }
@@ -458,7 +479,45 @@ syncDownloadBtn.addEventListener('click', async ()=>{
   try{ await loadHistoryFromSupabase(); }catch(e){ console.error(e); alert('読み込みに失敗しました（コンソール参照）'); }
 });
 
+// chart modal close
 closeChartBtn.addEventListener('click', ()=> {
   chartModal.classList.add('hidden');
   if(chartInstance){ chartInstance.destroy(); chartInstance = null; chartLegend.innerHTML = ''; }
+});
+
+// --- Custom task UI handlers ---
+// Add custom task (from input)
+function normalizeTaskName(name){ return (name || '').trim(); }
+function isDuplicateTask(name){
+  if(!name) return true;
+  const lower = name.toLowerCase();
+  return getAllTasks().some(t => (t||'').toLowerCase() === lower);
+}
+
+addTaskBtn.addEventListener('click', ()=>{
+  const raw = newTaskInput.value || '';
+  const name = normalizeTaskName(raw);
+  if(!name){ alert('仕事内容を入力してください'); return; }
+  if(isDuplicateTask(name)){ alert('同じ名前の仕事内容が既にあります'); return; }
+  customTasks.push(name);
+  saveCustomTasks();
+  initTaskButtons();
+  newTaskInput.value = '';
+  // optionally select it immediately
+  if(shiftState.working) switchTask(name);
+  updateUI();
+});
+
+// Enterキーで追加
+newTaskInput.addEventListener('keypress', (e)=>{
+  if(e.key === 'Enter'){ e.preventDefault(); addTaskBtn.click(); }
+});
+
+// Clear custom tasks
+clearCustomBtn.addEventListener('click', ()=>{
+  if(!confirm('追加したカスタム仕事内容をすべて削除します。よろしいですか？')) return;
+  customTasks = [];
+  saveCustomTasks();
+  initTaskButtons();
+  updateUI();
 });
