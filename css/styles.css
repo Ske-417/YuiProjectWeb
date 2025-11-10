@@ -6,6 +6,9 @@
   --muted:#6b7280;
   --danger:#d9534f;
   --custom:#f3e8ff;
+  --input-bg: linear-gradient(180deg,#ffffff,#fbfbff);
+  --input-border: rgba(15,23,42,0.06);
+  --pill-shadow: 0 6px 18px rgba(43,124,255,0.08);
 }
 
 *{box-sizing:border-box}
@@ -53,22 +56,66 @@ body{
 .row{display:flex;align-items:center}
 .between{justify-content:space-between}
 .buttons{display:flex;gap:10px}
-button{padding:10px 14px;border-radius:10px;border:none;cursor:pointer;font-weight:700}
-.primary{background:linear-gradient(180deg,var(--accent),#1a5fe6);color:white}
+button{padding:10px 14px;border-radius:10px;border:none;cursor:pointer;font-weight:700;transition:transform .12s ease, box-shadow .12s ease}
+button:active{transform:translateY(1px)}
+.primary{background:linear-gradient(180deg,var(--accent),#1a5fe6);color:white;box-shadow:var(--pill-shadow)}
 .secondary{background:#f3f6ff;color:var(--accent);border:1px solid rgba(43,124,255,0.08)}
 .danger{background:linear-gradient(180deg,#fff0f0,#ffecec);color:var(--danger);border:1px solid rgba(217,83,79,0.08)}
 .status p{margin:0;color:var(--muted)}
 .task-section{margin-top:12px}
 
+/* --- Task buttons --- */
 .task-buttons{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
-.task-buttons button{padding:8px 12px;background:#f2f6ff;border-radius:10px;border:1px solid rgba(43,124,255,0.08);color:var(--accent);font-weight:600}
+.task-buttons button{padding:8px 12px;background:#f2f6ff;border-radius:10px;border:1px solid rgba(43,124,255,0.08);color:var(--accent);font-weight:600;cursor:pointer}
 .task-buttons button.active{background:linear-gradient(180deg,var(--accent),var(--accent-2));color:white;box-shadow:0 6px 14px rgba(43,124,255,0.12)}
-/* custom task styling when button has data-custom attribute */
 .task-buttons button[data-custom="1"]{ background:var(--custom); color:#6b21a8; border:1px solid rgba(123,63,248,0.12); box-shadow:none; }
 
+/* --- Input pill styles --- */
+/* Apply to login email input and new task input to make them look like rounded buttons */
+.login-controls input[type="email"],
+.task-add input[type="text"] {
+  appearance: none;
+  -webkit-appearance: none;
+  display:inline-block;
+  padding:10px 16px;
+  border-radius:999px; /* pill */
+  border:1px solid var(--input-border);
+  background: var(--input-bg);
+  box-shadow: 0 6px 18px rgba(12,24,64,0.06);
+  outline: none;
+  font-size:15px;
+  transition: box-shadow .15s ease, transform .08s ease, border-color .12s ease;
+  min-width: 200px;
+}
+
+/* make the pill feel like a button on hover/focus */
+.login-controls input[type="email"]:hover,
+.task-add input[type="text"]:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 24px rgba(12,24,64,0.10);
+  border-color: rgba(43,124,255,0.18);
+}
+.login-controls input[type="email"]:focus,
+.task-add input[type="text"]:focus {
+  box-shadow: 0 12px 30px rgba(43,124,255,0.12);
+  border-color: var(--accent-2);
+}
+
+/* small pill variant for compact areas */
+input.pill-small {
+  padding:8px 12px;
+  font-size:14px;
+  min-width:140px;
+}
+
+/* align inputs and buttons nicely on small screens */
+.login-controls,
+.task-add{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.login-buttons, .task-add-buttons {display:flex;gap:8px;align-items:center}
+
+/* --- rest of existing styles --- */
 .task-add{display:flex;gap:8px;align-items:center;margin-top:12px;flex-wrap:wrap}
-.task-add input{flex:1;min-width:180px;padding:8px 10px;border-radius:8px;border:1px solid rgba(15,23,42,0.06)}
-.task-add-buttons{display:flex;gap:8px;align-items:center}
+.task-add input{flex:1;min-width:180px;padding:8px 10px;border-radius:8px;border:1px solid rgba(15,23,42,0.06);}
 
 .current{margin-top:8px;color:var(--muted)}
 
