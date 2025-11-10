@@ -29,19 +29,27 @@ body{
 
 .app{min-height:100vh;display:flex;flex-direction:column;}
 
+/* ---------- Header / Hero ---------- */
 .hero{
   background: linear-gradient(90deg, rgba(43,124,255,0.12), rgba(106,160,255,0.06));
-  padding:18px 0;
+  padding:18px 0 8px 0;
   box-shadow: 0 1px 0 rgba(15,23,42,0.03);
 }
 .hero-inner{
   max-width:980px;margin:0 auto;padding:0 20px;display:flex;align-items:center;justify-content:space-between;gap:12px;
 }
 .brand{display:flex;gap:12px;align-items:center}
-.logo{width:56px;height:56px;border-radius:12px;background:linear-gradient(180deg,var(--accent),var(--accent-2));color:white;font-weight:800;display:flex;align-items:center;justify-content:center;font-size:22px;box-shadow:0 6px 18px rgba(43,124,255,0.16)}
-.brand h1{margin:0;font-size:20px}
-.tag{margin:0;color:var(--muted);font-size:13px}
+.logo-wrap{position:relative;display:flex;align-items:center;gap:8px}
+.logo{width:64px;height:64px;border-radius:14px;background:linear-gradient(180deg,var(--accent),var(--accent-2));color:white;font-weight:900;display:flex;align-items:center;justify-content:center;font-size:26px;box-shadow:0 10px 30px rgba(43,124,255,0.14);border:2px solid rgba(255,255,255,0.12)}
+.logo-accent{position:absolute;left:-6px;bottom:-12px;width:84px;height:32px;pointer-events:none}
+.brand-texts h1{margin:0;font-size:20px}
+.tag{margin:0;color:var(--muted);font-size:14px;margin-top:4px}
 
+/* subtle subtitle under hero */
+.hero-sub{max-width:980px;margin:8px auto 0;padding:0 20px}
+.hero-subtext{margin:0;color:var(--muted);font-size:13px}
+
+/* ---------- Common ---------- */
 .auth{display:flex;gap:8px;align-items:center}
 .auth input[type="email"]{padding:8px 10px;border-radius:8px;border:1px solid rgba(15,23,42,0.06);background:rgba(255,255,255,0.9);}
 
@@ -51,77 +59,80 @@ body{
 
 .container{max-width:980px;margin:22px auto;padding:0 20px 60px;flex:1}
 
-.card{background:var(--card);padding:16px;border-radius:12px;box-shadow:0 6px 18px rgba(12,24,64,0.04);margin-bottom:16px}
+.card{background:var(--card);padding:18px;border-radius:14px;box-shadow:0 10px 30px rgba(12,24,64,0.06);margin-bottom:20px}
 
 .row{display:flex;align-items:center}
 .between{justify-content:space-between}
-.buttons{display:flex;gap:10px}
-button{padding:10px 14px;border-radius:10px;border:none;cursor:pointer;font-weight:700;transition:transform .12s ease, box-shadow .12s ease}
+.buttons{display:flex;gap:12px}
+button{padding:12px 16px;border-radius:12px;border:none;cursor:pointer;font-weight:800;transition:transform .12s ease, box-shadow .12s ease}
 button:active{transform:translateY(1px)}
 .primary{background:linear-gradient(180deg,var(--accent),#1a5fe6);color:white;box-shadow:var(--pill-shadow)}
 .secondary{background:#f3f6ff;color:var(--accent);border:1px solid rgba(43,124,255,0.08)}
 .danger{background:linear-gradient(180deg,#fff0f0,#ffecec);color:var(--danger);border:1px solid rgba(217,83,79,0.08)}
 .status p{margin:0;color:var(--muted)}
-.task-section{margin-top:12px}
+.task-section{margin-top:14px}
 
-/* --- Task buttons --- */
-.task-buttons{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
-.task-buttons button{padding:8px 12px;background:#f2f6ff;border-radius:10px;border:1px solid rgba(43,124,255,0.08);color:var(--accent);font-weight:600;cursor:pointer}
-.task-buttons button.active{background:linear-gradient(180deg,var(--accent),var(--accent-2));color:white;box-shadow:0 6px 14px rgba(43,124,255,0.12)}
+/* ---------- BIG action buttons (start/stop) ---------- */
+.big-action{
+  font-size:18px;
+  padding:16px 26px;
+  border-radius:16px;
+  box-shadow:0 14px 36px rgba(43,124,255,0.12);
+}
+
+/* ---------- Task buttons ---------- */
+.task-buttons{display:flex;flex-wrap:wrap;gap:10px;margin-top:10px}
+.task-buttons button{padding:10px 14px;background:#f2f6ff;border-radius:12px;border:1px solid rgba(43,124,255,0.08);color:var(--accent);font-weight:700;cursor:pointer;font-size:15px}
+.task-buttons button.active{background:linear-gradient(180deg,var(--accent),var(--accent-2));color:white;box-shadow:0 8px 22px rgba(43,124,255,0.12)}
+/* custom task styling when button has data-custom attribute */
 .task-buttons button[data-custom="1"]{ background:var(--custom); color:#6b21a8; border:1px solid rgba(123,63,248,0.12); box-shadow:none; }
 
 /* --- Input pill styles --- */
-/* Apply to login email input and new task input to make them look like rounded buttons */
 .login-controls input[type="email"],
 .task-add input[type="text"] {
   appearance: none;
   -webkit-appearance: none;
   display:inline-block;
-  padding:10px 16px;
+  padding:12px 18px;
   border-radius:999px; /* pill */
   border:1px solid var(--input-border);
   background: var(--input-bg);
-  box-shadow: 0 6px 18px rgba(12,24,64,0.06);
+  box-shadow: 0 8px 22px rgba(12,24,64,0.06);
   outline: none;
   font-size:15px;
   transition: box-shadow .15s ease, transform .08s ease, border-color .12s ease;
-  min-width: 200px;
+  min-width: 220px;
 }
 
-/* make the pill feel like a button on hover/focus */
 .login-controls input[type="email"]:hover,
 .task-add input[type="text"]:hover {
   transform: translateY(-2px);
-  box-shadow: 0 10px 24px rgba(12,24,64,0.10);
+  box-shadow: 0 14px 30px rgba(12,24,64,0.10);
   border-color: rgba(43,124,255,0.18);
 }
 .login-controls input[type="email"]:focus,
 .task-add input[type="text"]:focus {
-  box-shadow: 0 12px 30px rgba(43,124,255,0.12);
+  box-shadow: 0 18px 36px rgba(43,124,255,0.14);
   border-color: var(--accent-2);
 }
 
 /* small pill variant for compact areas */
 input.pill-small {
-  padding:8px 12px;
+  padding:10px 14px;
   font-size:14px;
-  min-width:140px;
+  min-width:160px;
 }
 
-/* align inputs and buttons nicely on small screens */
+/* layouts for controls */
 .login-controls,
-.task-add{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.task-add{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 .login-buttons, .task-add-buttons {display:flex;gap:8px;align-items:center}
 
-/* --- rest of existing styles --- */
-.task-add{display:flex;gap:8px;align-items:center;margin-top:12px;flex-wrap:wrap}
-.task-add input{flex:1;min-width:180px;padding:8px 10px;border-radius:8px;border:1px solid rgba(15,23,42,0.06);}
+.current{margin-top:10px;color:var(--muted)}
 
-.current{margin-top:8px;color:var(--muted)}
-
-.history-list{margin-top:12px}
+.history-list{margin-top:14px}
 .entry{border-top:1px dashed #e9f2ff;padding:12px 0}
-.entry h3{margin:0 0 8px 0;font-size:15px}
+.entry h3{margin:0 0 10px 0;font-size:15px}
 .task-table{font-size:14px;margin-top:8px;border-collapse:collapse;width:100%}
 .task-table td, .task-table th{border:1px solid #f0f4ff;padding:8px;text-align:left}
 
@@ -134,13 +145,14 @@ input.pill-small {
 .modal-card{background:white;padding:18px;border-radius:12px;max-width:560px;width:92%;position:relative;box-shadow:0 18px 40px rgba(6,10,26,0.18)}
 .modal-close{position:absolute;right:10px;top:8px;border:none;background:transparent;font-size:18px;cursor:pointer}
 
-.footer{padding:14px 0;text-align:center;color:var(--muted);font-size:13px}
-.sync-row{margin-top:12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.footer{padding:16px 0;text-align:center;color:var(--muted);font-size:13px}
+.sync-row{margin-top:14px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 
 /* Responsive tweaks */
-@media (max-width:600px){
+@media (max-width:700px){
   .hero-inner, .container{padding-left:12px;padding-right:12px}
-  .logo{width:48px;height:48px}
+  .logo{width:56px;height:56px}
+  .big-action{font-size:16px;padding:14px 20px}
   .task-add input{min-width:140px}
   .buttons button{padding:10px 12px}
 }
