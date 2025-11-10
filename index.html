@@ -20,15 +20,32 @@
         </div>
 
         <div class="auth" id="authArea">
-          <input id="emailInput" type="email" placeholder="メールアドレスでログイン" />
-          <button id="sendMagicBtn">ログイン（Magic Link）</button>
-          <button id="signOutBtn" class="hidden">サインアウト</button>
+          <!-- Login UI is now separate below (loginView). This header area will show user email or sign-out -->
           <span id="userEmail" class="muted"></span>
+          <button id="signOutBtn" class="hidden small">サインアウト</button>
         </div>
       </div>
     </header>
 
-    <main class="container">
+    <!-- LOGIN VIEW (displayed until user logs in or continues as guest) -->
+    <main class="container" id="loginView">
+      <section class="card">
+        <h2>ログイン / クラウド同期</h2>
+        <p class="muted">メールアドレスでマジックリンクを送ります。リンクをクリックして戻ると自動でログインします。<br>
+        Supabase のプロジェクトで認証の「Site URL / Redirect URLs」にこのアプリの URL（例: https://Ske-417.github.io/YuiProjectWeb/ または http://localhost:8000/）を追加してください。</p>
+
+        <div style="margin-top:12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <input id="emailInput" type="email" placeholder="メールアドレスを入力" style="flex:1;min-width:220px" />
+          <button id="sendMagicBtn" class="primary">ログイン（Magic Link）を送る</button>
+          <button id="guestBtn" class="secondary">ゲストとして続行</button>
+        </div>
+
+        <p class="muted small" id="loginHint" style="margin-top:10px"></p>
+      </section>
+    </main>
+
+    <!-- MAIN APP (hidden until login or guest) -->
+    <main class="container hidden" id="mainView" aria-hidden="true">
       <section class="controls card">
         <div class="row between">
           <div class="buttons">
@@ -76,7 +93,7 @@
     </div>
 
     <footer class="footer">
-      <p>Yui — データはブラウザのローカルストレージに保存されます。クラウド同期（Supabase）も利用できます。</p>
+      <p>Yui — データはブラウザのローカルストレージに保存されます。クラウド同期（Supabase）を使うと複数端末で同期できます。</p>
     </footer>
 
   </div>
