@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>勤務タイムトラッカー</title>
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>勤務タイムトラッカー</h1>
+      <p>医療従事者向け：出勤/退勤・業務別の時間記録（ローカルに保存）</p>
+    </header>
+
+    <section class="controls">
+      <div class="buttons">
+        <button id="startBtn">出勤</button>
+        <button id="stopBtn" disabled>退勤</button>
+      </div>
+
+      <div class="status">
+        <p>状態: <span id="statusText">未出勤</span></p>
+        <p>現在の業務: <strong id="currentTask">-</strong></p>
+        <p>経過時間: <span id="elapsed">00:00:00</span></p>
+      </div>
+
+      <div class="tasks">
+        <p>業務を選択（出勤中にタップ）：</p>
+        <div class="task-buttons" id="taskButtons">
+          <!-- 動的に生成 -->
+        </div>
+      </div>
+    </section>
+
+    <section class="history">
+      <h2>履歴</h2>
+      <div class="history-actions">
+        <button id="exportCsv">CSVエクスポート</button>
+        <button id="clearHistory">履歴を削除</button>
+      </div>
+      <div id="historyList">
+        <!-- 動的 -->
+      </div>
+    </section>
+
+    <footer>
+      <p>データはブラウザのローカルストレージに保存されます。GitHub Pagesでホスト可能。</p>
+    </footer>
+  </div>
+  <script src="js/app.js"></script>
+</body>
+</html>
