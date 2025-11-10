@@ -3,51 +3,72 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>勤務タイムトラッカー</title>
+  <title>Yui — 勤務タイムトラッカー</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;600;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/styles.css" />
 </head>
 <body>
-  <div class="container">
-    <header>
-      <h1>勤務タイムトラッカー</h1>
-      <p>医療従事者向け：出勤/退勤・業務別の時間記録（ローカルに保存）</p>
-    </header>
-
-    <section class="controls">
-      <div class="buttons">
-        <button id="startBtn">出勤</button>
-        <button id="stopBtn" disabled>退勤</button>
-      </div>
-
-      <div class="status">
-        <p>状態: <span id="statusText">未出勤</span></p>
-        <p>現在の業務: <strong id="currentTask">-</strong></p>
-        <p>経過時間: <span id="elapsed">00:00:00</span></p>
-      </div>
-
-      <div class="tasks">
-        <p>業務を選択（出勤中にタップ）：</p>
-        <div class="task-buttons" id="taskButtons">
-          <!-- 動的に生成 -->
+  <div class="app">
+    <header class="hero">
+      <div class="hero-inner">
+        <div class="brand">
+          <div class="logo">Y</div>
+          <div>
+            <h1>Yui</h1>
+            <p class="tag">医療従事者のための美しい勤務トラッカー</p>
+          </div>
         </div>
       </div>
-    </section>
+    </header>
 
-    <section class="history">
-      <h2>履歴</h2>
-      <div class="history-actions">
-        <button id="exportCsv">CSVエクスポート</button>
-        <button id="clearHistory">履歴を削除</button>
-      </div>
-      <div id="historyList">
-        <!-- 動的 -->
-      </div>
-    </section>
+    <main class="container">
+      <section class="controls card">
+        <div class="row between">
+          <div class="buttons">
+            <button id="startBtn" class="primary">出勤</button>
+            <button id="stopBtn" class="secondary" disabled>退勤</button>
+          </div>
+          <div class="status">
+            <p>状態: <strong id="statusText">未出勤</strong></p>
+            <p>経過: <span id="elapsed">00:00:00</span></p>
+          </div>
+        </div>
 
-    <footer>
-      <p>データはブラウザのローカルストレージに保存されます。GitHub Pagesでホスト可能。</p>
+        <div class="task-section">
+          <p class="muted">業務を選択（出勤中にタップ）</p>
+          <div class="task-buttons" id="taskButtons"></div>
+          <p class="current">現在の業務: <strong id="currentTask">-</strong></p>
+        </div>
+      </section>
+
+      <section class="history card">
+        <div class="history-header row between">
+          <h2>履歴</h2>
+          <div class="history-actions">
+            <button id="exportCsv">CSVエクスポート</button>
+            <button id="clearHistory" class="danger">履歴を削除</button>
+          </div>
+        </div>
+        <div id="historyList" class="history-list"></div>
+      </section>
+    </main>
+
+    <div id="chartModal" class="modal hidden">
+      <div class="modal-card">
+        <button class="modal-close" id="closeChart">✕</button>
+        <h3>勤務内訳</h3>
+        <canvas id="chartCanvas" width="400" height="400"></canvas>
+        <div id="chartLegend" class="chart-legend"></div>
+      </div>
+    </div>
+
+    <footer class="footer">
+      <p>Yui — データはブラウザのローカルストレージに保存されます。GitHub Pages でホストできます。</p>
     </footer>
+
   </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>
