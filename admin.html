@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Yui — 管理画面</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;600;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css" />
+  <style>
+    /* small admin-specific tweaks */
+    .admin-header{max-width:980px;margin:20px auto;padding:0 20px;display:flex;justify-content:space-between;align-items:center;gap:12px}
+    .admin-panel{max-width:980px;margin:0 auto;padding:0 20px 60px}
+    .admin-table{width:100%;border-collapse:collapse}
+    .admin-table th,.admin-table td{border:1px solid #eef6ff;padding:8px;text-align:left}
+    .admin-actions{display:flex;gap:8px;align-items:center}
+    .date-controls{display:flex;gap:8px;align-items:center;margin-bottom:12px}
+    .editable{background:#fffef6}
+    .json-editor{width:100%;min-height:48px;font-family:monospace}
+  </style>
+</head>
+<body>
+  <header class="hero" role="banner">
+    <div class="hero-inner">
+      <div class="brand">
+        <div class="logo" aria-hidden="true">Y</div>
+        <div class="brand-texts">
+          <h1>Yui 管理画面</h1>
+        </div>
+      </div>
+      <div id="adminUserArea"></div>
+    </div>
+  </header>
+
+  <main class="admin-panel">
+    <section class="card">
+      <div class="date-controls">
+        <label for="adminDate">日付選択:</label>
+        <input type="date" id="adminDate" />
+        <button id="loadDayBtn" class="small">読み込み</button>
+        <span id="adminStatus" class="muted"></span>
+      </div>
+
+      <div id="adminListWrap">
+        <!-- populated by JS -->
+      </div>
+    </section>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js/dist/umd/supabase.min.js"></script>
+  <script src="js/admin.js"></script>
+</body>
+</html>
