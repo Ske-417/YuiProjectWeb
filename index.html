@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Yui — 勤務タイムトラッカー</title>
+  <title>Yui</title>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;600;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/styles.css" />
 </head>
@@ -15,8 +15,15 @@
           <div class="logo">Y</div>
           <div>
             <h1>Yui</h1>
-            <p class="tag">医療従事者のための美しい勤務トラッカー</p>
+            <p class="tag">医療従事者のための勤務トラッカー</p>
           </div>
+        </div>
+
+        <div class="auth" id="authArea">
+          <input id="emailInput" type="email" placeholder="メールアドレスでログイン" />
+          <button id="sendMagicBtn">ログイン（Magic Link）</button>
+          <button id="signOutBtn" class="hidden">サインアウト</button>
+          <span id="userEmail" class="muted"></span>
         </div>
       </div>
     </header>
@@ -38,6 +45,12 @@
           <p class="muted">業務を選択（出勤中にタップ）</p>
           <div class="task-buttons" id="taskButtons"></div>
           <p class="current">現在の業務: <strong id="currentTask">-</strong></p>
+        </div>
+
+        <div class="sync-row">
+          <button id="syncUpload" class="small">クラウドに同期（保存）</button>
+          <button id="syncDownload" class="small">クラウドから読み込む</button>
+          <span class="muted small" id="syncStatus"></span>
         </div>
       </section>
 
@@ -63,11 +76,13 @@
     </div>
 
     <footer class="footer">
-      <p>Yui — データはブラウザのローカルストレージに保存されます。GitHub Pages でホストできます。</p>
+      <p>Yui — データはブラウザのローカルストレージに保存されます。クラウド同期（Supabase）も利用できます。</p>
     </footer>
 
   </div>
 
+  <!-- Supabase (UMD), Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js/dist/umd/supabase.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="js/app.js"></script>
 </body>
